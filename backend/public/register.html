@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create account · Libra Library</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-visual">
+    <div class="brand-mark">
+      <div class="glyph">L</div>
+      <div class="word">Libra</div>
+    </div>
+    <div class="pitch">
+      <h1>Join the reading room.</h1>
+      <p>Create a member account to browse the catalog, track your loans, and see what's due — all from one dashboard.</p>
+    </div>
+    <div class="stamp-card">
+      <div class="stat"><b>Free</b><span>member registration</span></div>
+      <div class="stat"><b>Instant</b><span>catalog access</span></div>
+      <div class="stat"><b>Live</b><span>due-date tracking</span></div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <span class="eyebrow">New here</span>
+      <h2>Create a member account</h2>
+      <span class="sub">Staff accounts (librarian / admin) are provisioned by an administrator.</span>
+
+      <div id="alertBox"></div>
+
+      <form id="registerForm">
+        <div class="field">
+          <label for="name">Full name</label>
+          <input type="text" id="name" required autocomplete="name" placeholder="Jordan Ellis" />
+        </div>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" required autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="phone">Phone <span class="muted">(optional)</span></label>
+            <input type="text" id="phone" autocomplete="tel" placeholder="+1 555-0100" />
+          </div>
+          <div class="field">
+            <label for="address">Address <span class="muted">(optional)</span></label>
+            <input type="text" id="address" autocomplete="street-address" placeholder="12 Elm Street" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required autocomplete="new-password" placeholder="At least 6 characters" />
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Create account</button>
+      </form>
+
+      <div class="auth-foot">Already registered? <a href="/login.html">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/register.js"></script>
+</body>
+</html>
