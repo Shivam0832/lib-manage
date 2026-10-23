@@ -155,11 +155,15 @@ All endpoints are under `/api` and (except `/api/auth/register` and
 
 ## 🎨 Design notes
 
-The visual identity leans into the subject: an **index-card / card
-catalog** motif for book records, an ink-navy + brass/maroon academic
-palette (not the generic "cream + terracotta" AI-default look), **Lora**
-for display type and **Public Sans** for UI text, with **IBM Plex Mono**
-for call numbers and ISBNs to evoke stamped catalog labels.
+The look is a reading room: green-panelled navigation, cool paper
+surfaces, brass for whatever is selected. Every book gets a generated
+cover (its title set in **Fraunces** on the book's own colour, with a
+shaded spine), so the catalog reads like a shelf. Readers' loans show as
+date-due slips with a stamped date that turns amber when it's close and
+red when it's late. Interface text is **Public Sans**; call numbers and
+ISBNs use **IBM Plex Mono**. Light and dark themes follow the system or
+can be picked from the top bar. Fonts are served from `public/fonts`
+(SIL Open Font License), so the Content-Security-Policy stays `'self'`.
 
 ---
 

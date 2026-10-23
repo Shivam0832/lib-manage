@@ -9,8 +9,9 @@
   const tabs = document.querySelectorAll(".role-tab");
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      tabs.forEach((t) => t.classList.remove("active"));
+      tabs.forEach((t) => { t.classList.remove("active"); t.setAttribute("aria-pressed", "false"); });
       tab.classList.add("active");
+      tab.setAttribute("aria-pressed", "true");
       selectedRole = tab.dataset.role;
     });
   });
@@ -23,10 +24,21 @@
   try {
     const notice = sessionStorage.getItem("libra_notice");
     if (notice) {
-      alertBox.innerHTML = `<div class="alert alert-error">${escapeHtml(notice)}</div>`;
+      alertBox.innerHTML = `<div class="alert alert-error">${icon("alert")}${escapeHtml(notice)}</div>`;
       sessionStorage.removeItem("libra_notice");
     }
   } catch { /* ignore */ }
+
+  enhancePassword(document.getElementById("password"));
+
+  // One-click demo sign-in.
+  document.querySelectorAll("[data-demo]").forEach((b) => b.addEventListener("click", () => {
+    const role = b.dataset.demo;
+    document.querySelector(`.role-tab[data-role="${role}"]`).click();
+    document.getElementById("email").value = `${role}@libra.demo`;
+    document.getElementById("password").value = "password123";
+    form.requestSubmit();
+  }));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -47,7 +59,7 @@
       Auth.setUser(data.user);
       window.location.href = "/dashboard.html";
     } catch (err) {
-      alertBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      alertBox.innerHTML = `<div class="alert alert-error">${icon("alert")}${escapeHtml(err.message)}</div>`;
       submitBtn.disabled = false;
       submitBtn.textContent = "Sign in";
     }

@@ -126,3 +126,12 @@ test("members see only their own loans", async () => {
   assert.ok(r.body.issues.every((i) => i.user_id === ids.member));
   assert.equal((await api.post("/api/issues").set(as("member")).send({ book_id: 1, user_id: ids.member })).status, 403);
 });
+
+test("dashboard includes 14-day activity and the overdue list", async () => {
+  const staff = await api.get("/api/dashboard").set(as("librarian"));
+  assert.equal(staff.body.activity.length, 14);
+  assert.ok(staff.body.activity.at(-1).issued >= 1);
+  assert.ok(Array.isArray(staff.body.overdueList));
+  const member = await api.get("/api/dashboard").set(as("member"));
+  assert.ok(Array.isArray(member.body.openLoans));
+});
