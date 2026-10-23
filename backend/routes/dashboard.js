@@ -1,11 +1,12 @@
 const express = require("express");
 const db = require("../db");
 const { authenticate } = require("../middleware/auth");
+const { refreshOverdue } = require("../lib/circulation");
 
 const router = express.Router();
 
 router.get("/", authenticate, (req, res) => {
-  const now = new Date().toISOString();
+  refreshOverdue(); // so overdue counts and fines are current, not as of the last Circulation visit
 
   if (req.user.role === "member") {
     const activeLoans = db

@@ -28,6 +28,9 @@ router.post("/register", (req, res) => {
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Name, email and password are required." });
   }
+  if (typeof email !== "string" || typeof password !== "string" || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+    return res.status(400).json({ error: "Please enter a valid email address." });
+  }
   if (password.length < 6) {
     return res.status(400).json({ error: "Password must be at least 6 characters." });
   }
@@ -55,8 +58,8 @@ router.post("/login", (req, res) => {
     return res.status(400).json({ error: "Email and password are required." });
   }
 
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase().trim());
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(String(email).toLowerCase().trim());
+  if (!user || !bcrypt.compareSync(String(password), user.password_hash)) {
     return res.status(401).json({ error: "Incorrect email or password." });
   }
 
@@ -83,7 +86,7 @@ router.get("/me", authenticate, (req, res) => {
 router.put("/me", authenticate, (req, res) => {
   const { name, phone, address } = req.body;
   db.prepare("UPDATE users SET name = ?, phone = ?, address = ? WHERE id = ?").run(
-    name || req.user.name,
+    (name && String(name).trim()) || req.user.name,
     phone || null,
     address || null,
     req.user.id

@@ -8,12 +8,22 @@
   setPageHeader(isStaff ? "Circulation" : "My Loans", isStaff ? "Issue books, process returns, and track fines." : "Everything you currently have borrowed.");
 
   let currentStatus = "all";
+  let policy = { loanDays: 14, finePerDay: 5 };
+  api("/issues/policy").then((p) => { policy = p; }).catch(() => {});
+
+  const STATUS_LABEL = { issued: "On loan", overdue: "Overdue", returned: "Returned" };
+
+  function fineCell(i) {
+    if (!(i.fine_amount > 0)) return "—";
+    if (i.status !== "returned") return `${money(i.fine_amount)} <span class="muted" style="font-size:11px">(still growing)</span>`;
+    return `${money(i.fine_amount)} ${i.fine_paid ? '<span class="muted" style="font-size:11px">(paid)</span>' : '<span class="muted" style="font-size:11px">(due)</span>'}`;
+  }
 
   content.innerHTML = `
     <div class="toolbar">
       <div class="tabs" style="border:none; margin:0;">
-        <button class="tab-btn active" data-status="all">All</button>
-        <button class="tab-btn" data-status="issued">Issued</button>
+        <button class="tab-btn active" data-status="all" aria-pressed="true">All</button>
+        <button class="tab-btn" data-status="issued">On loan</button>
         <button class="tab-btn" data-status="overdue">Overdue</button>
         <button class="tab-btn" data-status="returned">Returned</button>
       </div>
@@ -41,8 +51,9 @@
 
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });
       btn.classList.add("active");
+      btn.setAttribute("aria-pressed", "true");
       currentStatus = btn.dataset.status;
       load();
     });
@@ -79,12 +90,12 @@
         ${isStaff ? `<td>${escapeHtml(i.member_name)}<br><span class="muted" style="font-size:12px">${escapeHtml(i.member_email)}</span></td>` : ""}
         <td>${fmtDate(i.issue_date)}</td>
         <td>${fmtDate(i.due_date)}</td>
-        <td><span class="status-badge ${i.status}">${i.status}</span></td>
-        <td>${i.fine_amount > 0 ? `$${i.fine_amount.toFixed(2)} ${i.fine_paid ? '<span class="muted" style="font-size:11px">(paid)</span>' : ''}` : "—"}</td>
+        <td><span class="status-badge ${escapeHtml(i.status)}">${escapeHtml(STATUS_LABEL[i.status] || i.status)}</span></td>
+        <td>${fineCell(i)}</td>
         ${isStaff ? `<td>
           <div class="row-actions">
             ${i.status !== "returned" ? `<button class="text-link-btn" data-return="${i.id}">Mark returned</button>` : ""}
-            ${i.fine_amount > 0 && !i.fine_paid ? `<button class="text-link-btn danger" data-payfine="${i.id}">Pay fine</button>` : ""}
+            ${i.status === "returned" && i.fine_amount > 0 && !i.fine_paid ? `<button class="text-link-btn danger" data-payfine="${i.id}">Record payment</button>` : ""}
           </div>
         </td>` : ""}
       </tr>
@@ -102,8 +113,8 @@
 
   async function returnBook(id) {
     try {
-      await api(`/issues/${id}/return`, { method: "PUT" });
-      showToast("Book marked as returned.", "success");
+      const { issue } = await api(`/issues/${id}/return`, { method: "PUT" });
+      showToast(issue.fine_amount > 0 ? `Returned late — fine due: ${money(issue.fine_amount)}.` : "Book returned on time.", "success");
       load();
     } catch (err) {
       showToast(err.message, "error");
@@ -111,6 +122,7 @@
   }
 
   async function payFine(id) {
+    if (!confirm("Record that this fine has been paid in full?")) return;
     try {
       await api(`/issues/${id}/pay-fine`, { method: "PUT" });
       showToast("Fine marked as paid.", "success");
@@ -129,14 +141,14 @@
         <div class="modal-body">
           <div id="modalAlert"></div>
           <div class="field">
-            <label>Book</label>
+            <label for="f_book">Book</label>
             <select id="f_book"><option value="">Loading books…</option></select>
           </div>
           <div class="field">
-            <label>Member</label>
+            <label for="f_member">Member</label>
             <select id="f_member"><option value="">Loading members…</option></select>
           </div>
-          <p class="muted" style="font-size:12.5px;">Loan period is 14 days from today. Late returns accrue a $5/day fine.</p>
+          <p class="muted" style="font-size:12.5px;">Loan period is ${policy.loanDays} days from today. Late returns accrue a ${money(policy.finePerDay)}/day fine.</p>
         </div>
         <div class="modal-foot">
           <button class="btn btn-ghost" id="cancelModal">Cancel</button>
@@ -145,7 +157,7 @@
       </div>
     `;
     document.body.appendChild(backdrop);
-    const close = () => backdrop.remove();
+    const close = wireModal(backdrop, () => backdrop.remove());
     backdrop.querySelector("#closeModal").addEventListener("click", close);
     backdrop.querySelector("#cancelModal").addEventListener("click", close);
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(); });
@@ -161,9 +173,10 @@
         : `<option value="">No available copies</option>`;
 
       const memberSel = document.getElementById("f_member");
-      memberSel.innerHTML = membersData.users.length
-        ? membersData.users.map((m) => `<option value="${m.id}">${escapeHtml(m.name)} — ${escapeHtml(m.email)}</option>`).join("")
-        : `<option value="">No members registered</option>`;
+      const activeMembers = membersData.users.filter((m) => m.status === "active");
+      memberSel.innerHTML = activeMembers.length
+        ? activeMembers.map((m) => `<option value="${m.id}">${escapeHtml(m.name)} — ${escapeHtml(m.email)}</option>`).join("")
+        : `<option value="">No active members</option>`;
     } catch (err) {
       document.getElementById("modalAlert").innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
     }
@@ -176,8 +189,8 @@
         return;
       }
       try {
-        await api("/issues", { method: "POST", body: { book_id, user_id } });
-        showToast("Book issued successfully.", "success");
+        const { issue } = await api("/issues", { method: "POST", body: { book_id, user_id } });
+        showToast(`Book issued — due back ${fmtDate(issue.due_date)}.`, "success");
         close();
         load();
       } catch (err) {

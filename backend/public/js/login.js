@@ -19,6 +19,15 @@
   const alertBox = document.getElementById("alertBox");
   const submitBtn = document.getElementById("submitBtn");
 
+  // Why were we sent here? (session expired, account suspended…)
+  try {
+    const notice = sessionStorage.getItem("libra_notice");
+    if (notice) {
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHtml(notice)}</div>`;
+      sessionStorage.removeItem("libra_notice");
+    }
+  } catch { /* ignore */ }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     alertBox.innerHTML = "";

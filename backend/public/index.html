@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <title>Libra Library</title>
-<script>
-  window.location.replace(localStorage.getItem("libra_token") ? "/dashboard.html" : "/login.html");
-</script>
+<!-- External file: the server's Content-Security-Policy blocks inline scripts. -->
+<script src="/js/index.js"></script>
 </head>
 <body></body>
 </html>

@@ -1,8 +1,55 @@
 const express = require("express");
 const db = require("../db");
 const { authenticate, authorize } = require("../middleware/auth");
+const { HttpError } = require("../lib/httpError");
 
 const router = express.Router();
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+/**
+ * Validate and normalise book fields. Values like published_year and
+ * cover_color end up in the page's HTML, so they must be exactly what we
+ * expect — a number and a #rrggbb colour — never arbitrary text.
+ */
+function cleanBook(body, existing = {}) {
+  const pick = (k) => (body[k] !== undefined ? body[k] : existing[k]);
+  const text = (v) => (v === undefined || v === null ? null : String(v).trim() || null);
+
+  const title = text(pick("title"));
+  const author = text(pick("author"));
+  if (!title || !author) throw new HttpError(400, "Title and author are required.");
+
+  let year = pick("published_year");
+  if (year === "" || year === undefined) year = null;
+  if (year !== null) {
+    year = Number(year);
+    if (!Number.isInteger(year) || year < 0 || year > new Date().getFullYear() + 1) {
+      throw new HttpError(400, "Published year must be a valid year.");
+    }
+  }
+
+  const color = pick("cover_color") || "#1C2541";
+  if (!HEX_COLOR.test(color)) throw new HttpError(400, "Spine colour must be a hex colour like #1C2541.");
+
+  const copies = Number(pick("total_copies") ?? 1);
+  if (!Number.isInteger(copies) || copies < 1 || copies > 10000) {
+    throw new HttpError(400, "Total copies must be a whole number of at least 1.");
+  }
+
+  return {
+    title,
+    author,
+    isbn: text(pick("isbn")),
+    category: text(pick("category")) || "General",
+    publisher: text(pick("publisher")),
+    published_year: year,
+    call_number: text(pick("call_number")),
+    cover_color: color,
+    total_copies: copies,
+    description: text(pick("description")),
+  };
+}
 
 // List + search + filter (everyone logged in can browse the catalog)
 router.get("/", authenticate, (req, res) => {
@@ -44,30 +91,11 @@ router.get("/:id", authenticate, (req, res) => {
 
 // Only admin/librarian may add, edit, or remove catalog entries.
 router.post("/", authenticate, authorize("admin", "librarian"), (req, res) => {
-  const { title, author, isbn, category, publisher, published_year, call_number, cover_color, total_copies, description } = req.body;
-
-  if (!title || !author) {
-    return res.status(400).json({ error: "Title and author are required." });
-  }
-
-  const copies = Number(total_copies) > 0 ? Number(total_copies) : 1;
-
+  const b = cleanBook(req.body);
   const info = db
     .prepare(`INSERT INTO books (title, author, isbn, category, publisher, published_year, call_number, cover_color, total_copies, available_copies, description)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(
-      title.trim(),
-      author.trim(),
-      isbn || null,
-      category || "General",
-      publisher || null,
-      published_year || null,
-      call_number || null,
-      cover_color || "#1C2541",
-      copies,
-      copies,
-      description || null
-    );
+    .run(b.title, b.author, b.isbn, b.category, b.publisher, b.published_year, b.call_number, b.cover_color, b.total_copies, b.total_copies, b.description);
 
   const book = db.prepare("SELECT * FROM books WHERE id = ?").get(info.lastInsertRowid);
   res.status(201).json({ book });
@@ -77,37 +105,32 @@ router.put("/:id", authenticate, authorize("admin", "librarian"), (req, res) => 
   const existing = db.prepare("SELECT * FROM books WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "Book not found." });
 
-  const {
-    title = existing.title,
-    author = existing.author,
-    isbn = existing.isbn,
-    category = existing.category,
-    publisher = existing.publisher,
-    published_year = existing.published_year,
-    call_number = existing.call_number,
-    cover_color = existing.cover_color,
-    total_copies = existing.total_copies,
-    description = existing.description,
-  } = req.body;
+  const b = cleanBook(req.body, existing);
 
   // Keep available_copies consistent if total_copies changes
-  const issuedOut = existing.total_copies - existing.available_copies;
-  const newAvailable = Math.max(0, Number(total_copies) - issuedOut);
+  const onLoan = db.prepare("SELECT COUNT(*) c FROM issues WHERE book_id = ? AND status IN ('issued','overdue')").get(existing.id).c;
+  if (b.total_copies < onLoan) {
+    throw new HttpError(400, `${onLoan} cop${onLoan === 1 ? "y is" : "ies are"} on loan, so total copies can't be lower than that.`);
+  }
 
   db.prepare(
     `UPDATE books SET title=?, author=?, isbn=?, category=?, publisher=?, published_year=?, call_number=?, cover_color=?, total_copies=?, available_copies=?, description=? WHERE id=?`
-  ).run(title, author, isbn, category, publisher, published_year, call_number, cover_color, total_copies, newAvailable, description, req.params.id);
+  ).run(b.title, b.author, b.isbn, b.category, b.publisher, b.published_year, b.call_number, b.cover_color, b.total_copies, b.total_copies - onLoan, b.description, existing.id);
 
   const book = db.prepare("SELECT * FROM books WHERE id = ?").get(req.params.id);
   res.json({ book });
 });
 
+// Deleting a book also deletes its loan history (ON DELETE CASCADE), so refuse
+// while copies are out (issued OR overdue) or fines on it are still unpaid.
 router.delete("/:id", authenticate, authorize("admin", "librarian"), (req, res) => {
-  const activeIssue = db.prepare("SELECT id FROM issues WHERE book_id = ? AND status = 'issued'").get(req.params.id);
-  if (activeIssue) {
-    return res.status(400).json({ error: "This book has copies currently on loan and cannot be removed." });
-  }
-  db.prepare("DELETE FROM books WHERE id = ?").run(req.params.id);
+  const book = db.prepare("SELECT id FROM books WHERE id = ?").get(req.params.id);
+  if (!book) throw new HttpError(404, "Book not found.");
+  const activeIssue = db.prepare("SELECT id FROM issues WHERE book_id = ? AND status IN ('issued','overdue')").get(book.id);
+  if (activeIssue) throw new HttpError(400, "This book has copies currently on loan and cannot be removed.");
+  const unpaid = db.prepare("SELECT id FROM issues WHERE book_id = ? AND fine_amount > 0 AND fine_paid = 0").get(book.id);
+  if (unpaid) throw new HttpError(400, "There are unpaid fines on this book's loans. Settle them before removing it.");
+  db.prepare("DELETE FROM books WHERE id = ?").run(book.id);
   res.json({ message: "Book removed from catalog." });
 });
 

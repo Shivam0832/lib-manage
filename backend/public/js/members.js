@@ -76,10 +76,10 @@
     }
     tbody.innerHTML = users.map((u) => `
       <tr>
-        <td><div style="display:flex;align-items:center;gap:10px;"><div class="avatar" style="width:30px;height:30px;font-size:11px;">${initials(u.name)}</div><b>${escapeHtml(u.name)}</b></div></td>
+        <td><div style="display:flex;align-items:center;gap:10px;"><div class="avatar" style="width:30px;height:30px;font-size:11px;">${escapeHtml(initials(u.name))}</div><b>${escapeHtml(u.name)}</b></div></td>
         <td>${escapeHtml(u.email)}</td>
-        <td><span class="status-badge ${u.role}">${u.role}</span></td>
-        <td><span class="status-badge ${u.status}">${u.status}</span></td>
+        <td><span class="status-badge ${escapeHtml(u.role)}">${escapeHtml(u.role)}</span></td>
+        <td><span class="status-badge ${escapeHtml(u.status)}">${escapeHtml(u.status)}</span></td>
         <td>${fmtDate(u.created_at)}</td>
         ${isAdmin ? `<td>
           <div class="row-actions">
@@ -101,7 +101,7 @@
   }
 
   async function removeUser(id) {
-    if (!confirm("Remove this account? This cannot be undone.")) return;
+    if (!confirm("Remove this account and its loan history? This cannot be undone.")) return;
     try {
       await api(`/members/${id}`, { method: "DELETE" });
       showToast("Account removed.", "success");
@@ -120,18 +120,18 @@
         <div class="modal-head"><h3>${isEdit ? "Edit account" : "New account"}</h3><button class="modal-close" id="closeModal">&times;</button></div>
         <div class="modal-body">
           <div id="modalAlert"></div>
-          <div class="field"><label>Full name</label><input id="f_name" value="${escapeHtml(existing?.name || "")}" /></div>
-          <div class="field"><label>Email</label><input id="f_email" type="email" value="${escapeHtml(existing?.email || "")}" ${isEdit ? "disabled" : ""} /></div>
-          ${!isEdit ? `<div class="field"><label>Password</label><input id="f_password" type="password" placeholder="At least 6 characters" /></div>` : ""}
+          <div class="field"><label for="f_name">Full name</label><input id="f_name" value="${escapeHtml(existing?.name || "")}" /></div>
+          <div class="field"><label for="f_email">Email</label><input id="f_email" type="email" value="${escapeHtml(existing?.email || "")}" ${isEdit ? "disabled" : ""} /></div>
+          ${!isEdit ? `<div class="field"><label for="f_password">Password</label><input id="f_password" type="password" placeholder="At least 6 characters" /></div>` : ""}
           <div class="grid-2">
-            <div class="field"><label>Role</label>
+            <div class="field"><label for="f_role">Role</label>
               <select id="f_role">
                 <option value="member" ${existing?.role === "member" ? "selected" : ""}>Member</option>
                 <option value="librarian" ${existing?.role === "librarian" ? "selected" : ""}>Librarian</option>
                 <option value="admin" ${existing?.role === "admin" ? "selected" : ""}>Admin</option>
               </select>
             </div>
-            ${isEdit ? `<div class="field"><label>Status</label>
+            ${isEdit ? `<div class="field"><label for="f_status">Status</label>
               <select id="f_status">
                 <option value="active" ${existing?.status === "active" ? "selected" : ""}>Active</option>
                 <option value="suspended" ${existing?.status === "suspended" ? "selected" : ""}>Suspended</option>
@@ -139,8 +139,8 @@
             </div>` : ""}
           </div>
           <div class="grid-2">
-            <div class="field"><label>Phone</label><input id="f_phone" value="${escapeHtml(existing?.phone || "")}" /></div>
-            <div class="field"><label>Address</label><input id="f_address" value="${escapeHtml(existing?.address || "")}" /></div>
+            <div class="field"><label for="f_phone">Phone</label><input id="f_phone" value="${escapeHtml(existing?.phone || "")}" /></div>
+            <div class="field"><label for="f_address">Address</label><input id="f_address" value="${escapeHtml(existing?.address || "")}" /></div>
           </div>
         </div>
         <div class="modal-foot">
@@ -150,7 +150,7 @@
       </div>
     `;
     document.body.appendChild(backdrop);
-    const close = () => backdrop.remove();
+    const close = wireModal(backdrop, () => backdrop.remove());
     backdrop.querySelector("#closeModal").addEventListener("click", close);
     backdrop.querySelector("#cancelModal").addEventListener("click", close);
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(); });

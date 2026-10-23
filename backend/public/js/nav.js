@@ -29,7 +29,7 @@ function renderShell(activeKey) {
 
   const navHtml = links
     .map(
-      (l) => `<a class="nav-link ${l.key === activeKey ? "active" : ""}" href="${l.href}">${NAV_ICONS[l.key]}<span>${l.label}</span></a>`
+      (l) => `<a class="nav-link ${l.key === activeKey ? "active" : ""}" href="${l.href}"${l.key === activeKey ? ' aria-current="page"' : ""}>${NAV_ICONS[l.key]}<span>${l.label}</span></a>`
     )
     .join("");
 
@@ -47,13 +47,13 @@ function renderShell(activeKey) {
       </nav>
       <div class="sidebar-foot">
         <div class="mini-profile">
-          <div class="avatar">${initials(user?.name)}</div>
+          <div class="avatar">${escapeHtml(initials(user?.name))}</div>
           <div class="who">
             <b>${escapeHtml(user?.name || "")}</b>
             <span>${escapeHtml(role)}</span>
           </div>
         </div>
-        <a href="#" class="logout-link" id="logoutLink">Sign out</a>
+        <button type="button" class="logout-link" id="logoutLink">Sign out</button>
       </div>
     </aside>
     <div class="main-area">
@@ -79,12 +79,24 @@ function renderShell(activeKey) {
     Auth.logout();
   });
 
+  // Mobile drawer: tap the scrim or press Escape to close.
   const hamburger = document.getElementById("hamburgerBtn");
+  const sidebar = document.getElementById("sidebar");
+  const scrim = document.createElement("div");
+  scrim.className = "nav-scrim";
+  shell.appendChild(scrim);
+  const setOpen = (open) => {
+    sidebar.classList.toggle("open", open);
+    scrim.classList.toggle("show", open);
+    if (hamburger) hamburger.setAttribute("aria-expanded", String(open));
+  };
   if (hamburger) {
-    hamburger.addEventListener("click", () => {
-      document.getElementById("sidebar").classList.toggle("open");
-    });
+    hamburger.setAttribute("aria-expanded", "false");
+    hamburger.setAttribute("aria-controls", "sidebar");
+    hamburger.addEventListener("click", () => setOpen(!sidebar.classList.contains("open")));
   }
+  scrim.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
 
   return { content: document.getElementById("pageContent") };
 }
@@ -94,4 +106,5 @@ function setPageHeader(title, sub) {
   const s = document.getElementById("pageSub");
   if (t) t.textContent = title;
   if (s) s.textContent = sub || "";
+  document.title = `${title} · Libra`;
 }

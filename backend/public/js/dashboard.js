@@ -28,7 +28,7 @@
       <div class="stat-card" style="--accent: var(--ink-800)"><div class="label">Active Loans</div><div class="value">${s.activeLoans}</div><div class="delta">Books currently checked out</div></div>
       <div class="stat-card" style="--accent: var(--danger)"><div class="label">Overdue</div><div class="value">${s.overdue}</div><div class="delta">${s.overdue > 0 ? "Please return soon" : "You're all caught up"}</div></div>
       <div class="stat-card" style="--accent: var(--sage)"><div class="label">Total Borrowed</div><div class="value">${s.totalBorrowed}</div><div class="delta">All-time loans</div></div>
-      <div class="stat-card" style="--accent: var(--maroon)"><div class="label">Outstanding Fines</div><div class="value">$${s.outstandingFines.toFixed(2)}</div><div class="delta">${s.outstandingFines > 0 ? "Settle at the front desk" : "Nothing owed"}</div></div>
+      <div class="stat-card" style="--accent: var(--maroon)"><div class="label">Outstanding Fines</div><div class="value">${money(s.outstandingFines)}</div><div class="delta">${s.outstandingFines > 0 ? "Settle at the front desk" : "Nothing owed"}</div></div>
     `;
 
     const rows = data.recentLoans.length
@@ -56,7 +56,7 @@
       <td><b>${escapeHtml(l.book_title)}</b><br><span class="muted" style="font-size:12px">${escapeHtml(l.book_author)}</span></td>
       <td>${fmtDate(l.issue_date)}</td>
       <td>${fmtDate(l.due_date)}</td>
-      <td><span class="status-badge ${l.status}">${l.status}</span></td>
+      <td><span class="status-badge ${escapeHtml(l.status)}">${escapeHtml(l.status)}</span></td>
     </tr>`;
   }
 
@@ -66,7 +66,7 @@
       <div class="stat-card" style="--accent: var(--ink-800)"><div class="label">Total Titles</div><div class="value">${s.totalTitles}</div><div class="delta">${s.totalBooks} copies in collection</div></div>
       <div class="stat-card" style="--accent: var(--sage)"><div class="label">Available Copies</div><div class="value">${s.availableBooks}</div><div class="delta">Ready to be issued</div></div>
       <div class="stat-card" style="--accent: var(--brass)"><div class="label">Active Loans</div><div class="value">${s.activeLoans}</div><div class="delta">${s.overdueLoans} overdue</div></div>
-      <div class="stat-card" style="--accent: var(--maroon)"><div class="label">Registered Members</div><div class="value">${s.totalMembers}</div><div class="delta">Outstanding fines: $${s.outstandingFines.toFixed(2)}</div></div>
+      <div class="stat-card" style="--accent: var(--maroon)"><div class="label">Registered Members</div><div class="value">${s.totalMembers}</div><div class="delta">Outstanding fines: ${money(s.outstandingFines)}</div></div>
     `;
 
     const issueRows = data.recentIssues.length
@@ -75,13 +75,13 @@
           <td>${escapeHtml(i.member_name)}</td>
           <td>${fmtDate(i.issue_date)}</td>
           <td>${fmtDate(i.due_date)}</td>
-          <td><span class="status-badge ${i.status}">${i.status}</span></td>
+          <td><span class="status-badge ${escapeHtml(i.status)}">${escapeHtml(i.status)}</span></td>
         </tr>`).join("")
       : `<tr><td colspan="5"><div class="empty-state"><h4>No circulation activity yet</h4></div></td></tr>`;
 
     const popularRows = data.popularBooks.map((b) => `
       <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line);">
-        <div style="width:34px;height:34px;border-radius:7px;background:${b.cover_color};flex-shrink:0;"></div>
+        <div style="width:34px;height:34px;border-radius:7px;background:${safeColor(b.cover_color)};flex-shrink:0;"></div>
         <div style="min-width:0; flex:1;">
           <div style="font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(b.title)}</div>
           <div class="muted" style="font-size:12px;">${escapeHtml(b.author)}</div>
@@ -91,7 +91,7 @@
     `).join("");
 
     document.getElementById("belowFold").innerHTML = `
-      <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; align-items:start;">
+      <div class="split-2">
         <div class="panel">
           <div class="panel-head"><h3>Recent circulation</h3><a href="/issues.html" class="text-link-btn">View all →</a></div>
           <div class="table-wrap">

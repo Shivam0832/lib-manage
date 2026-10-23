@@ -15,7 +15,7 @@ database server required.
 | **Authentication** | JWT-based login/register, password hashing (bcrypt), portal-aware login (pick Admin / Librarian / Member) |
 | **Role-based access** | Admin, Librarian, and Member each see a tailored dashboard and navigation; permissions enforced server-side, not just hidden in the UI |
 | **Catalog** | Search & filter by title/author/ISBN/call number, category, and availability; add/edit/remove books (staff only) |
-| **Circulation** | Issue a book to a member, mark returns, automatic 14-day loan period, automatic overdue detection and fine calculation ($5/day), fine payment tracking |
+| **Circulation** | Issue a book to a member, mark returns, automatic 14-day loan period, automatic overdue detection and fine calculation ($5 per calendar day late, configurable), fine payment once the book is back |
 | **Members** | Admins can create/edit/suspend/remove member and staff accounts; librarians can view members to issue books |
 | **Dashboards** | Role-specific stats: collection size, active/overdue loans, outstanding fines, most-borrowed titles, recent activity |
 | **Profile** | Every user can update their own details and change their password |
@@ -66,6 +66,12 @@ npm start
 
 The app will be running at **http://localhost:4000**.
 
+Run the API tests (uses a throwaway database, never `library.db`):
+
+```bash
+npm test
+```
+
 On first run, the SQLite database (`library.db`) is created automatically
 and seeded with demo accounts and a starter catalog:
 
@@ -81,7 +87,7 @@ and seeded with demo accounts and a starter catalog:
 
 ## 🔐 Before you deploy: security checklist
 
-1. **Set a real `JWT_SECRET`** in `.env` — a long random string (e.g. `openssl rand -hex 32`). Never use the example value.
+1. **Set a real `JWT_SECRET`** in `.env` — a long random string (e.g. `openssl rand -hex 32`) — and `NODE_ENV=production`. With `NODE_ENV=production` the server refuses to start on a missing or example secret.
 2. **Remove or change the demo accounts.** Log in as admin → Members → edit/remove the seeded users, or delete `library.db` before first boot on your production host so it seeds fresh (then immediately change the admin password).
 3. Serve over **HTTPS** (any of the platforms below handle this for you automatically).
 4. Consider lowering `JWT_EXPIRES_IN` in `.env` if you want shorter login sessions.
@@ -98,7 +104,7 @@ database, so it fits almost any Node host. Three easy options:
 2. On Render: **New → Web Service** → connect the repo, set **Root Directory** to `backend`.
 3. Build command: `npm install`  ·  Start command: `npm start`.
 4. Add environment variables `JWT_SECRET` and `JWT_EXPIRES_IN` in the Render dashboard.
-5. ⚠️ Render's free tier has an ephemeral filesystem — for persistent data across deploys, add a **Render Disk** mounted at `backend/` (or upgrade to a paid plan with a persistent disk) so `library.db` isn't wiped on redeploy.
+5. ⚠️ Render's free tier has an ephemeral filesystem — for persistent data across deploys, add a **Render Disk** (e.g. at `/var/data`) and set `DB_PATH=/var/data/library.db` so the database isn't wiped on redeploy.
 
 ### Option B — Railway.app
 1. Push to GitHub, then **New Project → Deploy from GitHub repo**.
@@ -137,9 +143,10 @@ All endpoints are under `/api` and (except `/api/auth/register` and
 | GET | `/api/books` | any logged-in user (search via `?q=&category=&availability=`) |
 | POST/PUT/DELETE | `/api/books/:id` | admin, librarian |
 | GET | `/api/issues` | any (members see only their own) |
+| GET | `/api/issues/policy` | any — loan days and fine per day |
 | POST | `/api/issues` | admin, librarian — issue a book |
 | PUT | `/api/issues/:id/return` | admin, librarian |
-| PUT | `/api/issues/:id/pay-fine` | admin, librarian |
+| PUT | `/api/issues/:id/pay-fine` | admin, librarian — only after the book is returned |
 | GET | `/api/members` | admin, librarian |
 | POST/PUT/DELETE | `/api/members/:id` | admin only |
 | GET | `/api/dashboard` | any logged-in user (role-aware payload) |

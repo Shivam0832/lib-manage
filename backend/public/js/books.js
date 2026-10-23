@@ -18,10 +18,10 @@
     <div class="toolbar">
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="searchInput" placeholder="Search by title, author, ISBN, or call number…" />
+        <input type="search" id="searchInput" aria-label="Search the catalog" placeholder="Search by title, author, ISBN, or call number…" />
       </div>
-      <select class="select-pill" id="categorySelect"><option value="all">All categories</option></select>
-      <select class="select-pill" id="availSelect">
+      <select class="select-pill" id="categorySelect" aria-label="Category"><option value="all">All categories</option></select>
+      <select class="select-pill" id="availSelect" aria-label="Availability">
         <option value="all">All copies</option>
         <option value="available">Available only</option>
         <option value="unavailable">Unavailable</option>
@@ -85,19 +85,19 @@
 
     grid.innerHTML = books.map((b) => `
       <div class="book-card">
-        <div class="book-spine" style="--spine:${b.cover_color}">
+        <div class="book-spine" style="--spine:${safeColor(b.cover_color)}">
           <span class="eyebrow" style="color:rgba(255,255,255,0.75)">${escapeHtml(b.category)}</span>
           ${b.call_number ? `<span class="call-no">${escapeHtml(b.call_number)}</span>` : ""}
         </div>
         <div class="body">
-          <div class="cat-tag">${b.published_year || ""}</div>
+          <div class="cat-tag">${escapeHtml(b.published_year || "")}</div>
           <h4>${escapeHtml(b.title)}</h4>
           <div class="author">by ${escapeHtml(b.author)}</div>
           <div class="foot">
             <span class="avail-pill ${b.available_copies > 0 ? "yes" : "no"}">${b.available_copies}/${b.total_copies} available</span>
             ${isStaff ? `<div class="actions">
-              <button class="icon-btn" title="Edit" data-edit="${b.id}">${editIcon()}</button>
-              <button class="icon-btn" title="Delete" data-delete="${b.id}">${trashIcon()}</button>
+              <button class="icon-btn" title="Edit" aria-label="Edit ${escapeHtml(b.title)}" data-edit="${b.id}">${editIcon()}</button>
+              <button class="icon-btn" title="Delete" aria-label="Delete ${escapeHtml(b.title)}" data-delete="${b.id}">${trashIcon()}</button>
             </div>` : ""}
           </div>
         </div>
@@ -141,24 +141,24 @@
         <div class="modal-head"><h3>${isEdit ? "Edit book" : "Add a new book"}</h3><button class="modal-close" id="closeModal">&times;</button></div>
         <div class="modal-body">
           <div id="modalAlert"></div>
-          <div class="field"><label>Title</label><input id="f_title" value="${escapeHtml(book?.title || "")}" /></div>
+          <div class="field"><label for="f_title">Title</label><input id="f_title" value="${escapeHtml(book?.title || "")}" /></div>
           <div class="grid-2">
-            <div class="field"><label>Author</label><input id="f_author" value="${escapeHtml(book?.author || "")}" /></div>
-            <div class="field"><label>ISBN</label><input id="f_isbn" value="${escapeHtml(book?.isbn || "")}" /></div>
+            <div class="field"><label for="f_author">Author</label><input id="f_author" value="${escapeHtml(book?.author || "")}" /></div>
+            <div class="field"><label for="f_isbn">ISBN</label><input id="f_isbn" value="${escapeHtml(book?.isbn || "")}" /></div>
           </div>
           <div class="grid-2">
-            <div class="field"><label>Category</label><input id="f_category" value="${escapeHtml(book?.category || "")}" placeholder="Fiction, Science…" /></div>
-            <div class="field"><label>Call number</label><input id="f_call" value="${escapeHtml(book?.call_number || "")}" /></div>
+            <div class="field"><label for="f_category">Category</label><input id="f_category" value="${escapeHtml(book?.category || "")}" placeholder="Fiction, Science…" /></div>
+            <div class="field"><label for="f_call">Call number</label><input id="f_call" value="${escapeHtml(book?.call_number || "")}" /></div>
           </div>
           <div class="grid-2">
-            <div class="field"><label>Publisher</label><input id="f_publisher" value="${escapeHtml(book?.publisher || "")}" /></div>
-            <div class="field"><label>Published year</label><input id="f_year" type="number" value="${book?.published_year || ""}" /></div>
+            <div class="field"><label for="f_publisher">Publisher</label><input id="f_publisher" value="${escapeHtml(book?.publisher || "")}" /></div>
+            <div class="field"><label for="f_year">Published year</label><input id="f_year" type="number" min="0" max="${new Date().getFullYear() + 1}" value="${escapeHtml(book?.published_year || "")}" /></div>
           </div>
           <div class="grid-2">
-            <div class="field"><label>Total copies</label><input id="f_copies" type="number" min="1" value="${book?.total_copies || 1}" /></div>
-            <div class="field"><label>Spine color</label><input id="f_color" type="color" value="${book?.cover_color || "#1C2541"}" style="height:44px;padding:4px;" /></div>
+            <div class="field"><label for="f_copies">Total copies</label><input id="f_copies" type="number" min="1" value="${book?.total_copies || 1}" /></div>
+            <div class="field"><label for="f_color">Spine color</label><input id="f_color" type="color" value="${safeColor(book?.cover_color)}" style="height:44px;padding:4px;" /></div>
           </div>
-          <div class="field"><label>Description</label><textarea id="f_desc" rows="3">${escapeHtml(book?.description || "")}</textarea></div>
+          <div class="field"><label for="f_desc">Description</label><textarea id="f_desc" rows="3">${escapeHtml(book?.description || "")}</textarea></div>
         </div>
         <div class="modal-foot">
           <button class="btn btn-ghost" id="cancelModal">Cancel</button>
@@ -167,7 +167,7 @@
       </div>
     `;
     document.body.appendChild(backdrop);
-    const close = () => backdrop.remove();
+    const close = wireModal(backdrop, () => backdrop.remove());
     backdrop.querySelector("#closeModal").addEventListener("click", close);
     backdrop.querySelector("#cancelModal").addEventListener("click", close);
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(); });
@@ -180,7 +180,7 @@
         category: document.getElementById("f_category").value.trim() || "General",
         call_number: document.getElementById("f_call").value.trim(),
         publisher: document.getElementById("f_publisher").value.trim(),
-        published_year: Number(document.getElementById("f_year").value) || null,
+        published_year: document.getElementById("f_year").value ? Number(document.getElementById("f_year").value) : null,
         total_copies: Number(document.getElementById("f_copies").value) || 1,
         cover_color: document.getElementById("f_color").value,
         description: document.getElementById("f_desc").value.trim(),

@@ -7,7 +7,7 @@
   setPageHeader("Profile", "Manage your account details and password.");
 
   content.innerHTML = `
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start; max-width:900px;">
+    <div class="split-even">
       <div class="panel">
         <div class="panel-head"><h3>Account details</h3></div>
         <div class="panel-body">
