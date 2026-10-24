@@ -100,6 +100,15 @@ The app is a single Node process (`npm start`) with a file-based SQLite
 database, so it fits almost any Node host. Three easy options:
 
 ### Option A — Render.com (free tier available)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Shivam0832/lib-manage)
+
+The button uses `render.yaml`: it creates a free web service, sets `NODE_ENV=production`
+and generates a strong `JWT_SECRET` for you. On the free plan the database resets to the
+demo data whenever the service restarts.
+
+Or set it up by hand:
+
 1. Push this project to a GitHub repo.
 2. On Render: **New → Web Service** → connect the repo, set **Root Directory** to `backend`.
 3. Build command: `npm install`  ·  Start command: `npm start`.
