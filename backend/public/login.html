@@ -3,67 +3,76 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sign in · Libra Library</title>
+<meta name="theme-color" content="#133229" />
+<title>Sign in · Libra</title>
+<link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/css/style.css" />
+<script src="/js/api.js"></script>
 </head>
 <body>
 
 <div class="auth-shell">
   <div class="auth-visual">
-    <div class="brand-mark">
-      <div class="glyph">L</div>
-      <div class="word">Libra</div>
-    </div>
+    <a class="brand-mark" href="/login.html" aria-label="Libra">
+      <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+      <span class="word">Libra</span>
+    </a>
     <div class="pitch">
-      <h1>The stacks, organized.</h1>
-      <p>One catalog for every title, one desk for every loan. Libra keeps your circulation, members, and fines in order — for admins, librarians, and readers alike.</p>
+    <div class="shelf" aria-hidden="true">
+      <span class="spine" style="--c:#6B2737;--h:168px;--w:30px;--d:.05s"></span>
+      <span class="spine" style="--c:#C49A3A;--h:190px;--w:24px;--d:.12s"></span>
+      <span class="spine" style="--c:#2F5233;--h:150px;--w:36px;--d:.19s"></span>
+      <span class="spine" style="--c:#E8E2D0;--h:176px;--w:22px;--d:.26s"></span>
+      <span class="spine" style="--c:#264653;--h:200px;--w:32px;--d:.33s"></span>
+      <span class="spine" style="--c:#8A6D3B;--h:160px;--w:26px;--d:.40s"></span>
+      <span class="spine" style="--c:#1C2541;--h:184px;--w:34px;--d:.47s"></span>
+      <span class="spine lean" style="--c:#B5552B;--h:170px;--w:28px;--d:.6s"></span>
     </div>
-    <div class="stamp-card">
-      <div class="stat"><b>3</b><span>role-based portals</span></div>
-      <div class="stat"><b>24/7</b><span>self-service catalog</span></div>
-      <div class="stat"><b>Auto</b><span>fine calculation</span></div>
+      <h1 style="margin-top:36px">The stacks, in order.</h1>
+      <p>Every title on one shelf, every loan on one desk. Readers see what's due, staff see what's out.</p>
     </div>
+    <span style="font-size:13px;color:#7f988d">Libra library</span>
   </div>
 
-  <div class="auth-form-side">
+  <main class="auth-form-side">
     <div class="auth-card">
-      <span class="eyebrow">Welcome back</span>
-      <h2>Sign in to your account</h2>
-      <span class="sub">Choose your portal and enter your credentials.</span>
+      <h2>Welcome back</h2>
+      <span class="sub">Choose how you use the library, then sign in.</span>
 
-      <div id="alertBox"></div>
+      <div id="alertBox" aria-live="polite"></div>
 
-      <div class="role-tabs" id="roleTabs">
-        <button type="button" class="role-tab active" data-role="member">Member</button>
-        <button type="button" class="role-tab" data-role="librarian">Librarian</button>
-        <button type="button" class="role-tab" data-role="admin">Admin</button>
+      <div class="role-tabs" id="roleTabs" role="group" aria-label="Sign in as">
+        <button type="button" class="role-tab active" data-role="member" aria-pressed="true">Reader</button>
+        <button type="button" class="role-tab" data-role="librarian" aria-pressed="false">Librarian</button>
+        <button type="button" class="role-tab" data-role="admin" aria-pressed="false">Admin</button>
       </div>
 
       <form id="loginForm">
         <div class="field">
-          <label for="email">Email address</label>
-          <input type="email" id="email" required autocomplete="email" placeholder="you@example.com" />
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email" />
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••" />
+          <input type="password" id="password" required autocomplete="current-password" />
         </div>
-        <button type="submit" class="btn btn-primary" id="submitBtn">Sign in</button>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">Sign in</button>
       </form>
 
-      <div class="auth-foot">Don't have an account? <a href="/register.html">Register as a member</a></div>
+      <div class="auth-foot">New reader? <a href="/register.html">Create an account</a></div>
 
       <div class="demo-creds">
-        <div><b>admin@libra.demo</b> — Admin portal</div>
-        <div><b>librarian@libra.demo</b> — Librarian portal</div>
-        <div><b>member@libra.demo</b> — Member portal</div>
-        <div>Password for all demo accounts: <b>password123</b></div>
+        <span class="label">Try the demo in one click</span>
+        <div class="demo-list">
+          <button type="button" data-demo="member"><b>Reader</b><span>Loans and due dates</span></button>
+          <button type="button" data-demo="librarian"><b>Librarian</b><span>Lend and return</span></button>
+          <button type="button" data-demo="admin"><b>Admin</b><span>Everything</span></button>
+        </div>
       </div>
     </div>
-  </div>
+  </main>
 </div>
 
-<script src="/js/api.js"></script>
 <script src="/js/login.js"></script>
 </body>
 </html>

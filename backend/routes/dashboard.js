@@ -1,11 +1,12 @@
 const express = require("express");
 const db = require("../db");
 const { authenticate } = require("../middleware/auth");
+const { refreshOverdue } = require("../lib/circulation");
 
 const router = express.Router();
 
 router.get("/", authenticate, (req, res) => {
-  const now = new Date().toISOString();
+  refreshOverdue(); // so overdue counts and fines are current, not as of the last Circulation visit
 
   if (req.user.role === "member") {
     const activeLoans = db
@@ -25,10 +26,20 @@ router.get("/", authenticate, (req, res) => {
       )
       .all(req.user.id);
 
+    // Books currently out, soonest due first — the member's "shelf".
+    const openLoans = db
+      .prepare(
+        `SELECT issues.*, books.title AS book_title, books.author AS book_author, books.cover_color, books.call_number
+         FROM issues JOIN books ON books.id = issues.book_id
+         WHERE issues.user_id = ? AND issues.status IN ('issued','overdue') ORDER BY due_date ASC`
+      )
+      .all(req.user.id);
+
     return res.json({
       role: "member",
       stats: { activeLoans, overdue, totalBorrowed, outstandingFines },
       recentLoans,
+      openLoans,
     });
   }
 
@@ -45,7 +56,7 @@ router.get("/", authenticate, (req, res) => {
 
   const recentIssues = db
     .prepare(
-      `SELECT issues.*, books.title AS book_title, users.name AS member_name
+      `SELECT issues.*, books.title AS book_title, books.cover_color, users.name AS member_name
        FROM issues JOIN books ON books.id = issues.book_id JOIN users ON users.id = issues.user_id
        ORDER BY issue_date DESC LIMIT 6`
     )
@@ -59,11 +70,41 @@ router.get("/", authenticate, (req, res) => {
     )
     .all();
 
+  // Overdue loans to chase, most overdue first.
+  const overdueList = db
+    .prepare(
+      `SELECT issues.id, issues.due_date, issues.fine_amount, books.title AS book_title, books.cover_color,
+              users.name AS member_name, users.email AS member_email, users.phone AS member_phone
+       FROM issues JOIN books ON books.id = issues.book_id JOIN users ON users.id = issues.user_id
+       WHERE issues.status = 'overdue' ORDER BY issues.due_date ASC LIMIT 6`
+    )
+    .all();
+
+  // Loans issued and returned per day over the last 14 days (UTC), oldest first.
+  const DAYS = 14;
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - (DAYS - 1));
+  const since = start.toISOString();
+  const activity = Array.from({ length: DAYS }, (_, i) => {
+    const d = new Date(start);
+    d.setUTCDate(start.getUTCDate() + i);
+    return { date: d.toISOString().slice(0, 10), issued: 0, returned: 0 };
+  });
+  const bump = (iso, key) => {
+    const day = activity.find((a) => a.date === String(iso).slice(0, 10));
+    if (day) day[key] += 1;
+  };
+  db.prepare("SELECT issue_date FROM issues WHERE issue_date >= ?").all(since).forEach((r) => bump(r.issue_date, "issued"));
+  db.prepare("SELECT return_date FROM issues WHERE return_date >= ?").all(since).forEach((r) => bump(r.return_date, "returned"));
+
   res.json({
     role: req.user.role,
     stats: { totalBooks, availableBooks, totalTitles, totalMembers, activeLoans, overdueLoans, outstandingFines },
     recentIssues,
     popularBooks,
+    overdueList,
+    activity,
   });
 });
 

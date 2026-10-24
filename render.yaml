@@ -1,0 +1,22 @@
+# One-click deploy: https://render.com/deploy?repo=https://github.com/Shivam0832/lib-manage
+# Free plan note: the filesystem resets on each deploy or restart, so the
+# SQLite database is recreated with the demo data. Add a persistent disk
+# (paid plan) and set DB_PATH to keep real data.
+services:
+  - type: web
+    name: libra
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d

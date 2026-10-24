@@ -11,7 +11,8 @@
   }
   const isAdmin = user.role === "admin";
 
-  setPageHeader("Members", isAdmin ? "Manage member and staff accounts." : "Browse registered members.");
+  setPageHeader("Members", isAdmin ? "Readers and staff accounts." : "Registered readers.",
+    isAdmin ? `<button class="btn btn-primary btn-sm" id="addBtn">${icon("userPlus")}<span class="hide-sm">New account</span></button>` : "");
 
   let currentQuery = "";
   let currentRole = "all";
@@ -20,22 +21,22 @@
   content.innerHTML = `
     <div class="toolbar">
       <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="searchInput" placeholder="Search by name or email…" />
+        ${icon("search")}
+        <label for="searchInput" class="sr-only">Search members</label>
+        <input type="search" id="searchInput" placeholder="Name or email" />
       </div>
-      <select class="select-pill" id="roleSelect">
+      <select class="select-pill" id="roleSelect" aria-label="Role">
         <option value="all">All roles</option>
-        <option value="member">Members</option>
+        <option value="member">Readers</option>
         <option value="librarian">Librarians</option>
         <option value="admin">Admins</option>
       </select>
-      ${isAdmin ? `<button class="btn btn-brass btn-sm" id="addBtn">+ New account</button>` : ""}
     </div>
     <div class="panel">
       <div class="table-wrap">
         <table class="data-table">
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th>${isAdmin ? "<th></th>" : ""}</tr>
+            <tr><th>Name</th><th class="hide-sm">Phone</th><th>Role</th><th>Status</th><th class="hide-sm">Joined</th>${isAdmin ? "<th></th>" : ""}</tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
@@ -71,20 +72,20 @@
   function renderRows(users, cols) {
     const tbody = document.getElementById("rows");
     if (!users.length) {
-      tbody.innerHTML = `<tr><td colspan="${cols}"><div class="empty-state"><h4>No members found</h4></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${cols}"><div class="empty-state"><div class="glyph">${icon("users")}</div><h4>No one matches</h4><p>Try a different name, or show all roles.</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = users.map((u) => `
       <tr>
-        <td><div style="display:flex;align-items:center;gap:10px;"><div class="avatar" style="width:30px;height:30px;font-size:11px;">${initials(u.name)}</div><b>${escapeHtml(u.name)}</b></div></td>
-        <td>${escapeHtml(u.email)}</td>
-        <td><span class="status-badge ${u.role}">${u.role}</span></td>
-        <td><span class="status-badge ${u.status}">${u.status}</span></td>
-        <td>${fmtDate(u.created_at)}</td>
+        <td><div class="book-cell"><div class="avatar" style="background:var(--green-soft);color:var(--green)">${escapeHtml(initials(u.name))}</div><div><div class="cell-main">${escapeHtml(u.name)}</div><div class="cell-sub">${escapeHtml(u.email)}</div></div></div></td>
+        <td class="hide-sm">${escapeHtml(u.phone || "—")}</td>
+        <td>${badge(u.role)}</td>
+        <td>${badge(u.status)}</td>
+        <td class="hide-sm">${fmtDate(u.created_at)}</td>
         ${isAdmin ? `<td>
           <div class="row-actions">
-            <button class="text-link-btn" data-edit="${u.id}">Edit</button>
-            <button class="text-link-btn danger" data-delete="${u.id}">Remove</button>
+            <button class="btn btn-quiet btn-sm btn-icon" data-edit="${u.id}" aria-label="Edit ${escapeHtml(u.name)}" title="Edit">${icon("edit")}</button>
+            ${u.id !== user.id ? `<button class="btn btn-quiet btn-sm btn-icon" data-delete="${u.id}" aria-label="Remove ${escapeHtml(u.name)}" title="Remove" style="color:var(--stamp)">${icon("trash")}</button>` : ""}
           </div>
         </td>` : ""}
       </tr>
@@ -101,7 +102,7 @@
   }
 
   async function removeUser(id) {
-    if (!confirm("Remove this account? This cannot be undone.")) return;
+    if (!confirm("Remove this account and its loan history? This cannot be undone.")) return;
     try {
       await api(`/members/${id}`, { method: "DELETE" });
       showToast("Account removed.", "success");
@@ -120,18 +121,18 @@
         <div class="modal-head"><h3>${isEdit ? "Edit account" : "New account"}</h3><button class="modal-close" id="closeModal">&times;</button></div>
         <div class="modal-body">
           <div id="modalAlert"></div>
-          <div class="field"><label>Full name</label><input id="f_name" value="${escapeHtml(existing?.name || "")}" /></div>
-          <div class="field"><label>Email</label><input id="f_email" type="email" value="${escapeHtml(existing?.email || "")}" ${isEdit ? "disabled" : ""} /></div>
-          ${!isEdit ? `<div class="field"><label>Password</label><input id="f_password" type="password" placeholder="At least 6 characters" /></div>` : ""}
+          <div class="field"><label for="f_name">Full name</label><input id="f_name" value="${escapeHtml(existing?.name || "")}" /></div>
+          <div class="field"><label for="f_email">Email</label><input id="f_email" type="email" value="${escapeHtml(existing?.email || "")}" ${isEdit ? "disabled" : ""} /></div>
+          ${!isEdit ? `<div class="field"><label for="f_password">Temporary password</label><input id="f_password" type="password" autocomplete="new-password" /><span class="hint">At least 6 characters. Share it privately.</span></div>` : ""}
           <div class="grid-2">
-            <div class="field"><label>Role</label>
+            <div class="field"><label for="f_role">Role</label>
               <select id="f_role">
-                <option value="member" ${existing?.role === "member" ? "selected" : ""}>Member</option>
+                <option value="member" ${existing?.role === "member" ? "selected" : ""}>Reader</option>
                 <option value="librarian" ${existing?.role === "librarian" ? "selected" : ""}>Librarian</option>
                 <option value="admin" ${existing?.role === "admin" ? "selected" : ""}>Admin</option>
               </select>
             </div>
-            ${isEdit ? `<div class="field"><label>Status</label>
+            ${isEdit ? `<div class="field"><label for="f_status">Status</label>
               <select id="f_status">
                 <option value="active" ${existing?.status === "active" ? "selected" : ""}>Active</option>
                 <option value="suspended" ${existing?.status === "suspended" ? "selected" : ""}>Suspended</option>
@@ -139,8 +140,8 @@
             </div>` : ""}
           </div>
           <div class="grid-2">
-            <div class="field"><label>Phone</label><input id="f_phone" value="${escapeHtml(existing?.phone || "")}" /></div>
-            <div class="field"><label>Address</label><input id="f_address" value="${escapeHtml(existing?.address || "")}" /></div>
+            <div class="field"><label for="f_phone">Phone</label><input id="f_phone" value="${escapeHtml(existing?.phone || "")}" /></div>
+            <div class="field"><label for="f_address">Address</label><input id="f_address" value="${escapeHtml(existing?.address || "")}" /></div>
           </div>
         </div>
         <div class="modal-foot">
@@ -150,7 +151,8 @@
       </div>
     `;
     document.body.appendChild(backdrop);
-    const close = () => backdrop.remove();
+    enhancePassword(backdrop.querySelector("#f_password"));
+    const close = wireModal(backdrop, () => backdrop.remove());
     backdrop.querySelector("#closeModal").addEventListener("click", close);
     backdrop.querySelector("#cancelModal").addEventListener("click", close);
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(); });
@@ -170,7 +172,7 @@
         if (isEdit) {
           const status = document.getElementById("f_status").value;
           await api(`/members/${existing.id}`, { method: "PUT", body: { name, phone, address, role, status } });
-          showToast("Account updated.", "success");
+          showToast(`Saved ${name}'s account.`, "success");
         } else {
           const email = document.getElementById("f_email").value.trim();
           const password = document.getElementById("f_password").value;
@@ -179,7 +181,7 @@
             return;
           }
           await api("/members", { method: "POST", body: { name, email, password, role, phone, address } });
-          showToast("Account created.", "success");
+          showToast(`${name} can now sign in.`, "success");
         }
         close();
         load();

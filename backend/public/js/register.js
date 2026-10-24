@@ -7,6 +7,7 @@
   const form = document.getElementById("registerForm");
   const alertBox = document.getElementById("alertBox");
   const submitBtn = document.getElementById("submitBtn");
+  enhancePassword(document.getElementById("password"));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -28,7 +29,7 @@
       Auth.setUser(data.user);
       window.location.href = "/dashboard.html";
     } catch (err) {
-      alertBox.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+      alertBox.innerHTML = `<div class="alert alert-error">${icon("alert")}${escapeHtml(err.message)}</div>`;
       submitBtn.disabled = false;
       submitBtn.textContent = "Create account";
     }
